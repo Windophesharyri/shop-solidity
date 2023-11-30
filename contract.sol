@@ -43,6 +43,7 @@ contract FishShop {
         address whoSent;
         uint statusChange;
         uint answerStatus;
+        address shopAddress;
     }
 
     struct UserArray {
@@ -133,14 +134,19 @@ contract FishShop {
     }
  
     // 1 - down, 0 - up
-    function modifyApplication(uint statusChange) public { 
+    function modifyApplication(uint statusChange, address shopAddress) public { 
         if (statusChange == 1) {
             require(allUsers[msg.sender].role != 2, "You can't downgrade from customer");
         }
         if (statusChange == 0) {
             require(allUsers[msg.sender].role != 1, "You can't upgrade from seller");
         }
-        ALLApplications.push(Applications(ALLApplications.length, msg.sender, statusChange, 0));
+        if (allUsers[msg.sender].role == 2) {
+            ALLApplications.push(Applications(ALLApplications.length, msg.sender, statusChange, 0, shopAddress));
+        } else {
+            ALLApplications.push(Applications(ALLApplications.length, msg.sender, statusChange, 0, address(0)));
+        }
+        
     }
  
     function answerApplicationCustomer(uint id, bool answer) public {
@@ -159,6 +165,7 @@ contract FishShop {
                     if (ALLApplications[i].statusChange == 0) {
                         ALLApplications[i].answerStatus = 1;
                         allUsers[ALLApplications[i].whoSent].role -= 1;
+                        allSellersWorking.push(SellersWorking(ALLApplications[i].whoSent, ALLApplications[i].shopAddress));
                     }
                 }
             } 
@@ -178,12 +185,14 @@ contract FishShop {
                 if (answer == false) {
                     ALLApplications[i].answerStatus = 2;
                 } else if (answer) {
-                    if (ALLApplications[i].statusChange == 0) {
-                        ALLApplications[i].answerStatus = 1;
-                        allUsers[ALLApplications[i].whoSent].role -= 1;
-                    } else if (ALLApplications[i].statusChange == 1) {
+                    if (ALLApplications[i].statusChange == 1) {
                         ALLApplications[i].answerStatus = 1;
                         allUsers[ALLApplications[i].whoSent].role += 1;
+                        for (uint j = 0; j < allSellersWorking.length; j++) {
+                            if (allSellersWorking[j].seller == ALLApplications[i].whoSent) {
+                            delete allSellersWorking[j];
+                            }
+                        }
                     }
                 } 
             }
